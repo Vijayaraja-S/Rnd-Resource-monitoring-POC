@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.Internal;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.util.List;
@@ -21,9 +22,11 @@ public class Instance {
     @Id
     @UuidGenerator
     private String id;
-    private String name;
+    private String instanceName;
+    private String instanceId;
     private String ipAddress;
-    private String hostName;
+    private Integer port;
+    private Integer Pid;
 
     @OneToMany(mappedBy = "instance", cascade = CascadeType.ALL)
     private List<Job> jobs;

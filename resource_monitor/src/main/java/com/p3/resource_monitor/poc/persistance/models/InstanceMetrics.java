@@ -15,18 +15,17 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldNameConstants
-@Table(name = "system_metrics")
-public class SystemMetrics {
+@Table(name = "instance_metrics")
+public class InstanceMetrics {
     @Id
     @UuidGenerator
     private String id;
     private String cpu;
     private String memory;
     private String disk;
-    private String networkReceiving;
-    private String networkSending;
     private String TotalNetworkSending;
     private String TotalNetworkReceive;
+    private String instanceRunningTime;
     private Instant timestamp;
 
     @ManyToOne(fetch = FetchType.LAZY)

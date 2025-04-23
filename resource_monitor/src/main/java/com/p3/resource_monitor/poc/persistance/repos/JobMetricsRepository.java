@@ -7,6 +7,5 @@ import java.time.Instant;
 import java.util.List;
 
 public interface JobMetricsRepository extends JpaRepository<JobMetrics, String> {
-    List<JobMetrics> findByJobId(String jobId);
-    List<JobMetrics> findByTimestampBetween(Instant from, Instant to);
+    List<JobMetrics> findByJob_Id(String jobId);
 }

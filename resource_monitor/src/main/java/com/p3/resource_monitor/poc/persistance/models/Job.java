@@ -26,7 +26,7 @@ public class Job {
     private Instant startTime;
     private Instant endTime;
     private String status;
-    private String jobInput;
+    private byte [] jobInput;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "instance_id", nullable = false)

@@ -1,14 +1,10 @@
 package com.p3.resource_monitor.poc.util;
 
+import com.p3.resource_monitor.poc.beans.ConnectionBean;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
-
-import com.p3.resource_monitor.poc.beans.ColumnInfo;
-import com.p3.resource_monitor.poc.beans.ConnectionBean;
 import lombok.Getter;
 
 public class JDBCConnection {
@@ -45,22 +41,5 @@ public class JDBCConnection {
     if (connection != null) {
       connection.close();
     }
-  }
-
-  public String getSampleSelectQuery(
-      String schema, String tableName, List<ColumnInfo> columnInfoList) {
-    return getSampleSelectQuery(schema, tableName, columnInfoList, 150000);
-  }
-
-  public String getSampleSelectQuery(
-      String schema, String tableName, List<ColumnInfo> columnInfoList, int records) {
-    if (Objects.requireNonNull(connectionType).equalsIgnoreCase("POSTGRES")) {
-      String columnList =
-          columnInfoList.stream()
-              .map(item -> "\"" + item.getColumn() + "\"")
-              .collect(Collectors.joining(", "));
-      return String.format("SELECT %s FROM \"%s\" LIMIT %d", columnList, tableName, records);
-    }
-    return "";
   }
 }

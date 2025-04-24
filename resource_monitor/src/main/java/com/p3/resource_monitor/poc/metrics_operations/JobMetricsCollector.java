@@ -3,6 +3,10 @@ package com.p3.resource_monitor.poc.metrics_operations;
 import com.p3.resource_monitor.poc.persistance.models.Job;
 import com.p3.resource_monitor.poc.persistance.models.JobMetrics;
 import com.p3.resource_monitor.poc.persistance.repos.JobMetricsRepository;
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -10,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import oshi.SystemInfo;
+import oshi.hardware.CentralProcessor;
 import oshi.hardware.NetworkIF;
 import oshi.software.os.OSProcess;
 import oshi.software.os.OperatingSystem;
@@ -23,6 +28,8 @@ public class JobMetricsCollector {
 
     private final Map<String, ScheduledFuture<?>> jobMetricFutures = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
+
+    MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
 
     private final SystemInfo systemInfo = new SystemInfo();
     private final OperatingSystem os = systemInfo.getOperatingSystem();
@@ -55,10 +62,16 @@ public class JobMetricsCollector {
             Thread.sleep(100);  // simulate tick gap
             OSProcess newProcess = os.getProcess(pid);
 
+            CentralProcessor processor = systemInfo.getHardware().getProcessor();
+            int logicalProcessorCount = processor.getLogicalProcessorCount();
+
             double cpuLoad = 100 * newProcess.getProcessCpuLoadBetweenTicks(oldProcess);
-            long usedMemory = process.getResidentSetSize();
-            long totalMemory = systemInfo.getHardware().getMemory().getTotal();
-            double usedMemoryPercent = (double) usedMemory / totalMemory * 100;
+            double normalizedCpuLoad = cpuLoad / logicalProcessorCount;
+
+
+            MemoryUsage heapUsage = memoryMXBean.getHeapMemoryUsage();
+            long heapMemory = heapUsage.getUsed() / (1024 * 1024);
+
 
             long bytesRead = process.getBytesRead();
             long bytesWritten = process.getBytesWritten();
@@ -69,8 +82,8 @@ public class JobMetricsCollector {
 
             JobMetrics metrics = JobMetrics.builder()
                     .job(job)
-                    .cpu(String.format("%.2f%%", cpuLoad))
-                    .memory(String.format("%.2f%%", usedMemoryPercent))
+                    .cpu(String.format("%.2f%%", normalizedCpuLoad))
+                    .memory(String.format("Heap Memory(MB): " + heapMemory))
                     .disk(String.format("Read: %.2f MiB, Write: %.2f MiB", bytesRead / 1e6, bytesWritten / 1e6))
                     .network(String.format("Sent: %.2f MiB, Received: %.2f MiB", bytesSent / 1e6, bytesReceived / 1e6))
                     .timestamp(Instant.now())

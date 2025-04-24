@@ -1,4 +1,4 @@
-package com.p3.resource_monitor.poc.service.impl;
+package com.p3.resource_monitor.poc.service;
 
 import com.p3.resource_monitor.poc.persistance.models.Instance;
 import com.p3.resource_monitor.poc.persistance.models.Job;

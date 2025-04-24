@@ -6,15 +6,11 @@ import com.netflix.discovery.shared.Application;
 import com.netflix.discovery.shared.Applications;
 import com.p3.resource_monitor.poc.persistance.models.Instance;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -26,7 +22,6 @@ public class InstanceRegistrar {
   private final InstanceRepository instanceRepository;
   private final DiscoveryClient discoveryClient;
   private final EurekaClient client;
-  @Async("taskExecutor")
   @Scheduled(cron = "*/2 * * * * *")
   public void registerInstance(){
     try {

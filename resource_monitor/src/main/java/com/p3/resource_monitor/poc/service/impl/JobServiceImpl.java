@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 import com.p3.resource_monitor.poc.Extraction.ProcessExtraction;
 import com.p3.resource_monitor.poc.beans.JobInputBean;
 import com.p3.resource_monitor.poc.metrics_operations.JobMetricsCollector;
+import com.p3.resource_monitor.poc.persistance.models.Instance;
 import com.p3.resource_monitor.poc.persistance.models.Job;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
 import com.p3.resource_monitor.poc.persistance.repos.JobRepository;
@@ -23,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -39,16 +41,18 @@ public class JobServiceImpl implements JobService {
   private final InstanceRepository instanceRepository;
   private final JobMetricsCollector jobMetricsCollector;
 
-  private Environment environment;
+  @Autowired private Environment environment;
 
   @Override
-  public String initJob(JobInputBean jobInputBean, String instanceId) throws JsonProcessingException {
+  public String initJob(JobInputBean jobInputBean, String instanceId)
+      throws JsonProcessingException {
     Job job =
         Job.builder()
             .jobType("EXTRACTION")
             .startTime(Instant.now())
             .status("READY")
-            .jobInput(new ObjectMapper().writeValueAsString(jobInputBean.getConnection()).getBytes())
+            .jobInput(
+                new ObjectMapper().writeValueAsString(jobInputBean).getBytes())
             .instance(instanceRepository.findById(instanceId).orElseThrow())
             .build();
     jobRepository.save(job);
@@ -59,8 +63,8 @@ public class JobServiceImpl implements JobService {
   public List<Job> getJobsByInstanceId(String instanceId) {
     return jobRepository.findByInstance_Id(instanceId);
   }
-  @Async("taskExecutor")
-  @Scheduled(cron = "*/3 * * * * *")
+
+  @Scheduled(cron = "*/20 * * * * *")
   public void processReadyJobs() throws SocketException, UnknownHostException {
     String currentIp = getRealIpAddress();
     String property = environment.getProperty("server.port");
@@ -68,18 +72,22 @@ public class JobServiceImpl implements JobService {
 
     log.info("Processing ready jobs for IP: {}, Port: {}", currentIp, currentPort);
 
-    List<Job> readyJobs =
-        jobRepository.findByStatus("READY").stream()
-            .filter(
-                job ->
-                    job.getInstance().getIpAddress().equals(currentIp)
-                        && job.getInstance().getPort() == currentPort)
-            .toList();
+    List<Job> ready = jobRepository.findByStatusWithInstance("READY");
+
+    List<Job> readyJobs = new ArrayList<>();
+    for (Job job : ready) {
+      Instance instance = job.getInstance();
+      if (instance.getIpAddress().equals(currentIp) && instance.getPort() == currentPort) {
+        readyJobs.add(job);
+      }
+    }
 
     if (readyJobs.isEmpty()) {
+      log.info("No ready jobs found for IP: {}, Port: {}", currentIp, currentPort);
       return;
     }
     ExecutorService executorService = Executors.newFixedThreadPool(readyJobs.size());
+    log.info("job running in  IP: {}, Port: {}", currentIp, currentPort);
     List<Future<?>> futures = new ArrayList<>();
     for (Job job : readyJobs) {
       Future<?> future = executorService.submit(() -> handleJob(job));

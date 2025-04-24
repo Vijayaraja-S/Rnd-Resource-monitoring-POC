@@ -3,6 +3,7 @@ package com.p3.resource_monitor.poc.service.impl;
 import com.p3.resource_monitor.poc.persistance.models.Instance;
 import com.p3.resource_monitor.poc.persistance.models.Job;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
+import com.p3.resource_monitor.poc.service.InstanceService;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.Optional;

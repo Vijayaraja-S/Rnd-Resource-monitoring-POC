@@ -7,13 +7,16 @@ import com.p3.resource_monitor.poc.persistance.models.Instance;
 import com.p3.resource_monitor.poc.persistance.models.InstanceMetrics;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceMetricsRepository;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
-import java.net.*;
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -29,12 +32,13 @@ public class OverAllInstanceMetricsCollector {
 
   private final InstanceRepository instanceRepository;
   private final InstanceMetricsRepository instanceMetricsRepository;
+  MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
 
-  @Async("taskExecutor") // This uses the taskExecutor defined above
-  @Scheduled(cron = "*/2 * * * * *")
+  // This uses the taskExecutor defined above
+  @Scheduled(cron = "*/1 * * * * *")
   public void collectMetrics() throws Exception {
     try {
-        log.info("Collecting system metrics...");
+      log.info("Collecting system metrics...");
 
       String ipAddress = getRealIpAddress();
       String instanceName = "RESOURCE-MONITOR";
@@ -79,13 +83,15 @@ public class OverAllInstanceMetricsCollector {
     Thread.sleep(100);
     OSProcess newProcess = os.getProcess(pid);
 
-    double cpuLoad = 100 * newProcess.getProcessCpuLoadBetweenTicks(oldProcess);
 
-    long totalVirtualMemory = systemInfo.getHardware().getMemory().getTotal();
-    long usedMemory = process.getResidentSetSize();
-    double usedMemoryPercent = (double) usedMemory / totalVirtualMemory * 100;
-    double usedMemoryGB = usedMemory / 1e9;
-    double totalMemoryGB = totalVirtualMemory / 1e9;
+    CentralProcessor processor = systemInfo.getHardware().getProcessor();
+    int logicalProcessorCount = processor.getLogicalProcessorCount();
+
+    double cpuLoad = 100 * newProcess.getProcessCpuLoadBetweenTicks(oldProcess);
+    double normalizedCpuLoad = cpuLoad / logicalProcessorCount;
+
+    MemoryUsage heapUsage = memoryMXBean.getHeapMemoryUsage();
+    long heapMemory = heapUsage.getUsed() / (1024 * 1024);
 
     long bytesRead = process.getBytesRead();
     long bytesWritten = process.getBytesWritten();
@@ -105,11 +111,8 @@ public class OverAllInstanceMetricsCollector {
             .instance(instance)
             .TotalNetworkSending(String.format("%.2f Mib", totalSentMB))
             .TotalNetworkReceive(String.format("%.2f Mib", totalReceivedMB))
-            .cpu(String.format("%.2f%%", cpuLoad))
-            .memory(
-                String.format(
-                    "%.2f%% used (%.2f / %.2f GiB)",
-                    usedMemoryPercent, usedMemoryGB, totalMemoryGB))
+            .cpu(String.format("%.2f%%", normalizedCpuLoad))
+            .memory("Heap Memory(MB): " + heapMemory)
             .disk(String.format("Read: %.2f MiB, Write: %.2f MiB", diskReadMB, diskWriteMB))
             .instanceRunningTime(uptime)
             .timestamp(Instant.now())
@@ -118,7 +121,7 @@ public class OverAllInstanceMetricsCollector {
     log.info("Instance metrics: {}", processMetrics);
     instanceMetricsRepository.save(processMetrics);
   }
-  @Async("taskExecutor")
+
   @Scheduled(cron = "*/5 * * * * *")
   public void cleanOldMetrics() {
     Instant cutoffTime = Instant.now().minusSeconds(300);

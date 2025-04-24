@@ -1,19 +1,19 @@
 package com.p3.resource_monitor.poc.metrics_operations;
 
+import static com.p3.resource_monitor.poc.metrics_operations.MetricUtils.fetchPid;
+import static com.p3.resource_monitor.poc.metrics_operations.MetricUtils.getRealIpAddress;
+
 import com.p3.resource_monitor.poc.persistance.models.Instance;
 import com.p3.resource_monitor.poc.persistance.models.InstanceMetrics;
-import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceMetricsRepository;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
 import java.net.*;
 import java.time.Instant;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -21,8 +21,6 @@ import oshi.SystemInfo;
 import oshi.hardware.*;
 import oshi.software.os.OSProcess;
 import oshi.software.os.OperatingSystem;
-
-import static com.p3.resource_monitor.poc.metrics_operations.MetricUtils.getRealIpAddress;
 
 @Component
 @RequiredArgsConstructor
@@ -32,13 +30,11 @@ public class OverAllInstanceMetricsCollector {
   private final InstanceRepository instanceRepository;
   private final InstanceMetricsRepository instanceMetricsRepository;
 
-  private final SystemInfo systemInfo = new SystemInfo();
-  private final OperatingSystem os = systemInfo.getOperatingSystem();
-
-  @Scheduled(fixedRate = 2000)
+  @Async("taskExecutor") // This uses the taskExecutor defined above
+  @Scheduled(cron = "*/2 * * * * *")
   public void collectMetrics() throws Exception {
     try {
-      log.info("Collecting system metrics...");
+        log.info("Collecting system metrics...");
 
       String ipAddress = getRealIpAddress();
       String instanceName = "RESOURCE-MONITOR";
@@ -122,30 +118,10 @@ public class OverAllInstanceMetricsCollector {
     log.info("Instance metrics: {}", processMetrics);
     instanceMetricsRepository.save(processMetrics);
   }
-
-  private Integer fetchPid(Integer port) throws IOException {
-    ProcessBuilder builder = new ProcessBuilder("lsof", "-i", ":" + port);
-    Process process = builder.start();
-
-    try (BufferedReader reader =
-        new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        if (line.startsWith("java") || line.toLowerCase().contains("java")) {
-          String[] parts = line.trim().split("\\s+");
-          System.out.println("PID using port " + port + ": " + parts[1]);
-          return Integer.parseInt(parts[1]);
-        }
-      }
-      throw new IOException("No process found on port " + port);
-    }
-  }
-
-
-
-  @Scheduled(fixedRate = 5000)
+  @Async("taskExecutor")
+  @Scheduled(cron = "*/5 * * * * *")
   public void cleanOldMetrics() {
-    Instant cutoffTime = Instant.now().minusSeconds(60);
+    Instant cutoffTime = Instant.now().minusSeconds(300);
     instanceMetricsRepository.deleteMetricsOlderThan(cutoffTime);
   }
 }

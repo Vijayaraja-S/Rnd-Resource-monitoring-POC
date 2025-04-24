@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class JobInputBean {
-    private ConnectionType connectionType;
+    private String connectionType;
     private String outputDir;
     private ConnectionBean connection;
 }

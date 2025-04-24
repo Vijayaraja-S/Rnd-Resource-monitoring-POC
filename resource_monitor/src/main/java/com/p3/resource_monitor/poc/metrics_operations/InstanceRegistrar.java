@@ -14,6 +14,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -25,11 +26,9 @@ public class InstanceRegistrar {
   private final InstanceRepository instanceRepository;
   private final DiscoveryClient discoveryClient;
   private final EurekaClient client;
-
-  @Scheduled(fixedRate = 2000)
-  public void registerInstance() throws UnknownHostException {
-    String currentIp = InetAddress.getLocalHost().getHostAddress();
-    int currentPort = Integer.parseInt(System.getProperty("server.port"));
+  @Async("taskExecutor")
+  @Scheduled(cron = "*/2 * * * * *")
+  public void registerInstance(){
     try {
       log.info("Registering instance...");
       List<String> serviceList = discoveryClient.getServices();

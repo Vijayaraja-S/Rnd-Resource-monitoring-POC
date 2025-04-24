@@ -1,4 +1,4 @@
-package com.p3.export.specifics;
+package com.p3.resource_monitor.poc.beans;
 
 public enum DataType {
   STRING,

@@ -1,7 +1,6 @@
-package com.p3.export.options;
+package com.p3.resource_monitor.poc.beans;
 
-import com.p3.export.specifics.DataType;
-import com.p3.export.specifics.ExcelSpecificDataType;
+
 import java.io.Serializable;
 import java.util.UUID;
 import lombok.*;

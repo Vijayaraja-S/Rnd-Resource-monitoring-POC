@@ -8,6 +8,9 @@ import com.p3.resource_monitor.poc.persistance.models.Job;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
 import com.p3.resource_monitor.poc.persistance.repos.JobRepository;
 import com.p3.resource_monitor.poc.service.JobService;
+
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,15 +19,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import static com.p3.resource_monitor.poc.metrics_operations.MetricUtils.getRealIpAddress;
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JobServiceImpl implements JobService {
   private final JobRepository jobRepository;
   private final InstanceRepository instanceRepository;
-
 
   @Override
   public String initJob(JobInputBean jobInputBean, String instanceId) {
@@ -45,9 +51,21 @@ public class JobServiceImpl implements JobService {
     return jobRepository.findByInstance_Id(instanceId);
   }
 
-  @Scheduled(fixedRate = 5000)
-  public void processReadyJobs() {
-    List<Job> readyJobs = jobRepository.findByStatus("READY");
+  @Scheduled(fixedRate = 3000)
+  public void processReadyJobs() throws SocketException, UnknownHostException {
+    String currentIp = getRealIpAddress();
+    int currentPort = Integer.parseInt(System.getProperty("server.port"));
+
+    log.info("Processing ready jobs for IP: {}, Port: {}", currentIp, currentPort);
+
+    List<Job> readyJobs =
+        jobRepository.findByStatus("READY").stream()
+            .filter(
+                job ->
+                    job.getInstance().getIpAddress().equals(currentIp)
+                        && job.getInstance().getPort() == currentPort)
+            .toList();
+
     if (readyJobs.isEmpty()) {
       return;
     }

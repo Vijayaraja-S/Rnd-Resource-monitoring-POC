@@ -22,6 +22,8 @@ import oshi.hardware.*;
 import oshi.software.os.OSProcess;
 import oshi.software.os.OperatingSystem;
 
+import static com.p3.resource_monitor.poc.metrics_operations.MetricUtils.getRealIpAddress;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -139,26 +141,7 @@ public class OverAllInstanceMetricsCollector {
     }
   }
 
-  public String getRealIpAddress() throws SocketException, UnknownHostException {
-    Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
 
-    while (networkInterfaces.hasMoreElements()) {
-      NetworkInterface ni = networkInterfaces.nextElement();
-      if (ni.isLoopback() || !ni.isUp()) continue;
-
-      Enumeration<InetAddress> addresses = ni.getInetAddresses();
-      while (addresses.hasMoreElements()) {
-        InetAddress addr = addresses.nextElement();
-        if (addr instanceof Inet4Address
-            && !addr.isLoopbackAddress()
-            && addr.isSiteLocalAddress()) {
-          return addr.getHostAddress();
-        }
-      }
-    }
-
-    return InetAddress.getLocalHost().getHostAddress();
-  }
 
   @Scheduled(fixedRate = 5000)
   public void cleanOldMetrics() {

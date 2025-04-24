@@ -6,6 +6,9 @@ import com.netflix.discovery.shared.Application;
 import com.netflix.discovery.shared.Applications;
 import com.p3.resource_monitor.poc.persistance.models.Instance;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +27,9 @@ public class InstanceRegistrar {
   private final EurekaClient client;
 
   @Scheduled(fixedRate = 2000)
-  public void registerInstance() {
+  public void registerInstance() throws UnknownHostException {
+    String currentIp = InetAddress.getLocalHost().getHostAddress();
+    int currentPort = Integer.parseInt(System.getProperty("server.port"));
     try {
       log.info("Registering instance...");
       List<String> serviceList = discoveryClient.getServices();

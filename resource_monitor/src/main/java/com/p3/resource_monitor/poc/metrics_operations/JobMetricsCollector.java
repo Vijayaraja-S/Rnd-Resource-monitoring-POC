@@ -59,12 +59,11 @@ public class JobMetricsCollector {
 
             process.updateAttributes();
             OSProcess oldProcess = os.getProcess(pid);
-            Thread.sleep(100);  // simulate tick gap
+            Thread.sleep(100);
             OSProcess newProcess = os.getProcess(pid);
 
             CentralProcessor processor = systemInfo.getHardware().getProcessor();
             int logicalProcessorCount = processor.getLogicalProcessorCount();
-
             double cpuLoad = 100 * newProcess.getProcessCpuLoadBetweenTicks(oldProcess);
             double normalizedCpuLoad = cpuLoad / logicalProcessorCount;
 

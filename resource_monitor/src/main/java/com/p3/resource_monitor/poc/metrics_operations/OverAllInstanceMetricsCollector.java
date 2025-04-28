@@ -14,6 +14,8 @@ import java.lang.management.MemoryUsage;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,10 +34,10 @@ public class OverAllInstanceMetricsCollector {
 
   private final InstanceRepository instanceRepository;
   private final InstanceMetricsRepository instanceMetricsRepository;
-  MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+  private  final MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+  private final ExecutorService metricsExecutorService = Executors.newFixedThreadPool(5);
 
-  // This uses the taskExecutor defined above
-  @Scheduled(cron = "*/1 * * * * *")
+  @Scheduled(cron = "*/2 * * * * *")
   public void collectMetrics() throws Exception {
     try {
       log.info("Collecting system metrics...");
@@ -51,6 +53,7 @@ public class OverAllInstanceMetricsCollector {
             "No matching instance found for instanceName: {}, IP: {}", instanceName, ipAddress);
         return;
       }
+
       for (Instance instance : instanceByIpAddressAndInstanceName) {
         if (Objects.nonNull(instance.getPid())) {
           initMetricsCalculations(instance.getPid(), instance);
@@ -83,10 +86,8 @@ public class OverAllInstanceMetricsCollector {
     Thread.sleep(100);
     OSProcess newProcess = os.getProcess(pid);
 
-
     CentralProcessor processor = systemInfo.getHardware().getProcessor();
     int logicalProcessorCount = processor.getLogicalProcessorCount();
-
     double cpuLoad = 100 * newProcess.getProcessCpuLoadBetweenTicks(oldProcess);
     double normalizedCpuLoad = cpuLoad / logicalProcessorCount;
 
@@ -95,6 +96,7 @@ public class OverAllInstanceMetricsCollector {
 
     long bytesRead = process.getBytesRead();
     long bytesWritten = process.getBytesWritten();
+
     double diskReadMB = bytesRead / 1e6;
     double diskWriteMB = bytesWritten / 1e6;
 
@@ -122,9 +124,9 @@ public class OverAllInstanceMetricsCollector {
     instanceMetricsRepository.save(processMetrics);
   }
 
-  @Scheduled(cron = "*/5 * * * * *")
+  @Scheduled(cron = "0 */3 * * * *")
   public void cleanOldMetrics() {
-    Instant cutoffTime = Instant.now().minusSeconds(300);
+    Instant cutoffTime = Instant.now().minusSeconds(3600);
     instanceMetricsRepository.deleteMetricsOlderThan(cutoffTime);
   }
 }

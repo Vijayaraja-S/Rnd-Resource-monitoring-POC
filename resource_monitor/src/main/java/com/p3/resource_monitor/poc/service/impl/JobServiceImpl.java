@@ -64,7 +64,7 @@ public class JobServiceImpl implements JobService {
     return jobRepository.findByInstance_Id(instanceId);
   }
 
-  @Scheduled(cron = "*/20 * * * * *")
+  @Scheduled(cron = "*/3 * * * * *")
   public void processReadyJobs() throws SocketException, UnknownHostException {
     String currentIp = getRealIpAddress();
     String property = environment.getProperty("server.port");
@@ -98,9 +98,7 @@ public class JobServiceImpl implements JobService {
   private void handleJob(Job job) {
     try {
       Integer pid = fetchPid(job.getInstance().getPort());
-
       jobMetricsCollector.startCollecting(job, pid);
-
       String jobInput = new String(job.getJobInput(), StandardCharsets.UTF_8);
       JobInputBean jobInputBean = new Gson().fromJson(jobInput, JobInputBean.class);
       new ProcessExtraction().extraction(jobInputBean);

@@ -6,8 +6,10 @@ import com.netflix.discovery.shared.Application;
 import com.netflix.discovery.shared.Applications;
 import com.p3.resource_monitor.poc.persistance.models.Instance;
 import com.p3.resource_monitor.poc.persistance.repos.InstanceRepository;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
@@ -22,10 +24,10 @@ public class InstanceRegistrar {
   private final InstanceRepository instanceRepository;
   private final DiscoveryClient discoveryClient;
   private final EurekaClient client;
-  @Scheduled(cron = "*/2 * * * * *")
-  public void registerInstance(){
+
+  @Scheduled(cron = "*/3 * * * * *")
+  public void registerInstance() {
     try {
-      log.info("Registering instance...");
       List<String> serviceList = discoveryClient.getServices();
       List<Instance> instancesList = new ArrayList<>();
 
@@ -34,7 +36,6 @@ public class InstanceRegistrar {
         for (Application registeredApplication : applications.getRegisteredApplications()) {
           List<InstanceInfo> instances = registeredApplication.getInstances();
           for (InstanceInfo info : instances) {
-            log.info("Instance found: {}", info);
             Instance.InstanceBuilder builder = Instance.builder();
             instancesList.add(
                 builder
@@ -46,7 +47,6 @@ public class InstanceRegistrar {
           }
         }
       }
-
       for (Instance instance : instancesList) {
         boolean exists =
             instanceRepository.existsByIpAddressAndInstanceNameAndPort(
@@ -55,8 +55,6 @@ public class InstanceRegistrar {
         if (!exists) {
           instanceRepository.save(instance);
           log.info("Instance registered: {}", instance);
-        } else {
-          log.info("ℹ️ Instance already registered.");
         }
       }
     } catch (Exception e) {
